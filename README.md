@@ -177,7 +177,7 @@ crontab -e
 ```
 18 13 * * * /usr/local/py_scripts/ywm_mon_pos_api/venv/bin/python3.10 /usr/local/py_scripts/ywm_mon_pos_api/main.py >> /usr/local/py_scripts/ywm_mon_pos_api/logfile.log 2>&1
 ```
-#### Волшебные числа
+### Волшебные числа
 1. Про эти можно почитать в документации к API [тут](https://yandex.ru/dev/webmaster/doc/dg/reference/host-query-analytics.html#request-format__device-type-ind) и [тут](https://yandex.ru/dev/webmaster/doc/dg/reference/host-query-analytics.html#request-format__region-ids)
 ```
 GEO = 11079 # 225, 1, 10174, 11079 
