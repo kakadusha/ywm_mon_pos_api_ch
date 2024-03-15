@@ -2,7 +2,7 @@
 Скрипт-сборщик данных из API Мониторинг поисковых запросов Яндекс.
 https://webmaster.yandex.ru/blog/vstrechayte-api-monitoringa-poiskovykh-zaprosov
 
-Скрипт решает задачу ограниченности данных четырнадцатью днями. В ЯВМ данные указываются только за последние две недели. Скрипт же собирает данные последовательно, накопляя их.
+Скрипт решает проблему ограниченности данных четырнадцатью днями. В ЯВМ данные указываются только за последние две недели. Скрипт же собирает данные последовательно, накопляя их.
 
 ## Описание данных в БД.
 Собираются все запросы по каждому url за каждый день, по которым был спрос и показы.
@@ -24,17 +24,17 @@ https://webmaster.yandex.ru/blog/vstrechayte-api-monitoringa-poiskovykh-zaprosov
 ## Примечание
 Скрипт и все настройки тестировались только на сборке Ubuntu 22.04 Jammy.
 
-### Технологии
+## Технологии
 - Python 3.10
 - MariaDB 10.6.16
 
-### Получение токена API Яндекс Мониторинг позиций
+## Получение токена API Яндекс Мониторинг позиций
 https://yandex.ru/dev/webmaster/doc/dg/tasks/how-to-get-oauth.html
 
-### Получение идентификатора пользователя
+## Получение идентификатора пользователя
 https://yandex.ru/dev/webmaster/doc/dg/reference/user.html
 
-### Последовательность действий
+## Последовательность действий
 #### Установка БД
 1. Производим обновления.
 ```
@@ -177,7 +177,7 @@ crontab -e
 ```
 18 13 * * * /usr/local/py_scripts/ywm_mon_pos_api/venv/bin/python3.10 /usr/local/py_scripts/ywm_mon_pos_api/main.py >> /usr/local/py_scripts/ywm_mon_pos_api/logfile.log 2>&1
 ```
-### Волшебные числа
+## Волшебные числа
 1. Про эти можно почитать в документации к API [тут](https://yandex.ru/dev/webmaster/doc/dg/reference/host-query-analytics.html#request-format__device-type-ind) и [тут](https://yandex.ru/dev/webmaster/doc/dg/reference/host-query-analytics.html#request-format__region-ids)
 ```
 GEO = 11079 # 225, 1, 10174, 11079 
@@ -193,6 +193,6 @@ SLEEP_TIME_ERR = 60
   - Количество повторений в случае неудачного обращения к API или БД.
   - Таймаут в сек. на случай, если было неудачное обращение к API или БД.
 
-### Автор
+## Автор
 - [Ed](https://github.com/Edbaro42/)
 - [Telegram](https://t.me/Edbaro42)
