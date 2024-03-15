@@ -7,14 +7,14 @@ https://webmaster.yandex.ru/blog/vstrechayte-api-monitoringa-poiskovykh-zaprosov
 ## Описание данных в БД.
 Собираются все запросы по каждому url за каждый день, по которым был спрос и показы.
 #### Столбцы
-URL	- url
-QUERY - запрос
-DATE - дата показа
-DEMAND - спрос
-IMPRESSIONS	- показ
-CLICKS - клик
-CTR - процент кликабельности
-POSITION - позиция
+    URL	- url
+    QUERY - запрос
+    DATE - дата показа
+    DEMAND - спрос
+    IMPRESSIONS	- показ
+    CLICKS - клик
+    CTR - процент кликабельности
+    POSITION - позиция
 #### Особенности
 Спрос собирается в том случае, если пользователем поисковой системы был введен поисковый запрос в поиск.
 Показы же собираются только в том случае, если пользователь увидил ссылку на сайт. Иначе говоря, если ссылка была на второй странице выдачи, а пользователь остался на первой, то показ не будет засчитан, в свою очередь - спрос учтется.
@@ -158,12 +158,12 @@ pip install -r requirements.txt
 ```
 nano .env
 ```
-API_URL = https://api.webmaster.yandex.net/v4/user/{user-id}/hosts/{host-id}/query-analytics/list #Адрес запроса к api.
-HEADERS = OAuth y0_example_token #Токен API.
-HOST = localhost #Если БД на этом же сервере, то оставляем без изменений, иначе указываем IP.
-USER = example_user #Указываем имя созданного ранее юзера в БД.
-PASSWORD = example_password #Указываем пароль для созданного ранее юзера в БД.
-DB = your_db_name #Указываем имя ранее созданной БД.
+    API_URL = https://api.webmaster.yandex.net/v4/user/{user-id}/hosts/{host-id}/query-analytics/list #Адрес запроса к api.
+    HEADERS = OAuth y0_example_token #Токен API.
+    HOST = localhost #Если БД на этом же сервере, то оставляем без изменений, иначе указываем IP.
+    USER = example_user #Указываем имя созданного ранее юзера в БД.
+    PASSWORD = example_password #Указываем пароль для созданного ранее юзера в БД.
+    DB = your_db_name #Указываем имя ранее созданной БД.
 
 2. проверяем время сервера, это нужно, чтобы правильно выставить задачу в cron.
 ```
@@ -177,3 +177,7 @@ crontab -e
 ```
 18 13 * * * /usr/local/py_scripts/ywm_mon_pos_api/venv/bin/python3.10 /usr/local/py_scripts/ywm_mon_pos_api/main.py >> /usr/local/py_scripts/ywm_mon_pos_api/logfile.log 2>&1
 ```
+
+### Автор
+- [Ed](https://github.com/Edbaro42/)
+- [Telegram](https://t.me/Edbaro42)
