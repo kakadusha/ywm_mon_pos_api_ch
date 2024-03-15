@@ -7,11 +7,11 @@ https://webmaster.yandex.ru/blog/vstrechayte-api-monitoringa-poiskovykh-zaprosov
 ## Описание данных в БД.
 Собираются все запросы по каждому url за каждый день, по которым был спрос и показы.
 #### Столбцы
-    URL	- url
+    URL - url
     QUERY - запрос
     DATE - дата показа
     DEMAND - спрос
-    IMPRESSIONS	- показ
+    IMPRESSIONS - показ
     CLICKS - клик
     CTR - процент кликабельности
     POSITION - позиция
