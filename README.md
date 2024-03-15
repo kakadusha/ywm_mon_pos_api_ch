@@ -179,12 +179,16 @@ crontab -e
 ```
 #### Волшебные числа
 1. Про эти можно почитать в документации к API [тут](https://yandex.ru/dev/webmaster/doc/dg/reference/host-query-analytics.html#request-format__device-type-ind) и [тут](https://yandex.ru/dev/webmaster/doc/dg/reference/host-query-analytics.html#request-format__region-ids)
-    GEO = 11079 # 225, 1, 10174, 11079 
-    DEVICE = 'ALL' # ALL, DESKTOP, MOBILE_AND_TABLET, MOBILE, TABLET
+```
+GEO = 11079 # 225, 1, 10174, 11079 
+DEVICE = 'ALL' # ALL, DESKTOP, MOBILE_AND_TABLET, MOBILE, TABLET
+```
 2. Эти цифры
-    SLEEP_TIME_API = 0.5
-    MAX_ATTEMPTS = 5
-    SLEEP_TIME_ERR = 60
+```
+SLEEP_TIME_API = 0.5
+MAX_ATTEMPTS = 5
+SLEEP_TIME_ERR = 60
+```
   - Таймаут в сек. обращений к API (есть ограничение - не более 10к запросов в час).
   - Количество повторений в случае неудачного обращения к API или БД.
   - Таймаут в сек. на случай, если было неудачнное обращение к API или БД.
