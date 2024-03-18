@@ -9,13 +9,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = os.getenv('API_URL')
-HEADERS = {'Authorization': os.getenv('HEADERS')}
+HEADERS = {'Authorization': os.getenv('API_HEADERS')}
 DB_PARAMS = {
-    'host': os.getenv('HOST'),
+    'host': os.getenv('DB_HOST'),
     'port': 3306,
-    'user': os.getenv('USER'),
-    'password': os.getenv('PASSWORD'),
-    'db': os.getenv('DB')
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'db': os.getenv('DB_DB')
 }
 
 GEO = 11079 # 225, 1, 10174, 11079 
