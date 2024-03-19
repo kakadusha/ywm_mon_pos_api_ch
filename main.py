@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS aggr (
     CLICKS FLOAT,
     CTR FLOAT,
     POSITION FLOAT,
-    UNIQUE INDEX query_date_uindex (QUERY, DATE)
+    UNIQUE INDEX query_date_uindex (QUERY, DATE, URL)
 );
 '''
 cursor.execute(create_table_query)
