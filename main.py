@@ -112,69 +112,70 @@ for url_value in urls:
                     ]
                 }
             }
+            print(BODY_QUERY)
             response = api_request(API_URL, HEADERS, BODY_QUERY)
             if total_count is None:
                 total_count = response['count']
             
             current_batch = response['text_indicator_to_statistics']
+
+            data = []
+            if url_value != None:
+                for text_indicator_to_statistics in response['text_indicator_to_statistics']:
+                    query_value = text_indicator_to_statistics['text_indicator']['value']
+                    print(query_value)
+                    for stat in text_indicator_to_statistics['statistics']:
+                        date = stat['date']
+                        field = stat['field']
+                        value = stat['value']
+                        row = {
+                            'URL': url_value,
+                            'QUERY': query_value,
+                            'DATE': date,
+                            'DEMAND': 0.0,
+                            'IMPRESSIONS': 0.0,
+                            'CLICKS': 0.0,
+                            'CTR': 0.0,
+                            'POSITION': 0.0
+                        }
+                        row[field] = value
+                        data.append(row)
             
+                df = pd.DataFrame(data)
+                df = df.groupby(['URL', 'QUERY', 'DATE'], as_index=False).sum()
+                df.loc[df['IMPRESSIONS'] == 0.0, ['POSITION']] = None
+                df = df[df['DEMAND'] != 0.0]
+                df['DATE'] = pd.to_datetime(df['DATE']).dt.strftime('%d.%m.%Y')
+            
+                attempts = 0
+                while attempts < MAX_ATTEMPTS:
+                    try:
+                        with connection.cursor() as cursor:
+                            for index, row in df.iterrows():
+                                query = '''
+                                INSERT IGNORE INTO school (URL, QUERY, DATE, DEMAND, IMPRESSIONS, CLICKS, CTR, POSITION)
+                                VALUES (%s, %s, STR_TO_DATE(%s, '%%d.%%m.%%Y'), %s, %s, %s, %s, %s);
+                                '''
+                                values = (row['URL'], row['QUERY'], row['DATE'], row['DEMAND'], 
+                                        row['IMPRESSIONS'], row['CLICKS'], row['CTR'], 
+                                        row['POSITION'] if pd.notnull(row['POSITION']) else None)
+                                cursor.execute(query, values)
+                            connection.commit()
+                        break    
+                    except Exception as err:
+                        logging.error(f'{time.ctime()} - Ответ базы данных: {err}. Повторная попытка через {SLEEP_TIME_ERR} секунд...')
+                        time.sleep(SLEEP_TIME_ERR)
+                        attempts += 1
+                if attempts == MAX_ATTEMPTS:
+                    logging.error(f'{time.ctime()} - Превышено количество попыток, завершение скрипта.')
+                    
             total_count -= len(current_batch)
             if total_count <= 0:
                 break
-            
             offset += 500
             time.sleep(SLEEP_TIME_API)
         else:
             break
-
-    data = []
-    if url_value != None:
-        for text_indicator_to_statistics in response['text_indicator_to_statistics']:
-            query_value = text_indicator_to_statistics['text_indicator']['value']
-            for stat in text_indicator_to_statistics['statistics']:
-                date = stat['date']
-                field = stat['field']
-                value = stat['value']
-                row = {
-                    'URL': url_value,
-                    'QUERY': query_value,
-                    'DATE': date,
-                    'DEMAND': 0.0,
-                    'IMPRESSIONS': 0.0,
-                    'CLICKS': 0.0,
-                    'CTR': 0.0,
-                    'POSITION': 0.0
-                }
-                row[field] = value
-                data.append(row)
-    
-        df = pd.DataFrame(data)
-        df = df.groupby(['URL', 'QUERY', 'DATE'], as_index=False).sum()
-        df.loc[df['IMPRESSIONS'] == 0.0, ['POSITION']] = None
-        df = df[df['DEMAND'] != 0.0]
-        df['DATE'] = pd.to_datetime(df['DATE']).dt.strftime('%d.%m.%Y')
-    
-        attempts = 0
-        while attempts < MAX_ATTEMPTS:
-            try:
-                with connection.cursor() as cursor:
-                    for index, row in df.iterrows():
-                        query = '''
-                        INSERT IGNORE INTO aggr (URL, QUERY, DATE, DEMAND, IMPRESSIONS, CLICKS, CTR, POSITION)
-                        VALUES (%s, %s, STR_TO_DATE(%s, '%%d.%%m.%%Y'), %s, %s, %s, %s, %s);
-                        '''
-                        values = (row['URL'], row['QUERY'], row['DATE'], row['DEMAND'], 
-                                row['IMPRESSIONS'], row['CLICKS'], row['CTR'], 
-                                row['POSITION'] if pd.notnull(row['POSITION']) else None)
-                        cursor.execute(query, values)
-                    connection.commit()
-                break    
-            except Exception as err:
-                logging.error(f'{time.ctime()} - Ответ базы данных: {err}. Повторная попытка через {SLEEP_TIME_ERR} секунд...')
-                time.sleep(SLEEP_TIME_ERR)
-                attempts += 1
-        if attempts == MAX_ATTEMPTS:
-            logging.error(f'{time.ctime()} - Превышено количество попыток, завершение скрипта.')
 
 connection.close()
 end_time = time.time()
