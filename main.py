@@ -18,9 +18,9 @@ DB_PARAMS = {
     'db': os.getenv('DB_NAME')
 }
 
-GEO = 11079 # 225, 1, 10174, 11079 
+GEO = 1 # 225, 1, 10174, 11079 
 DEVICE = 'ALL' # ALL, DESKTOP, MOBILE_AND_TABLET, MOBILE, TABLET
-SLEEP_TIME_API = 1
+SLEEP_TIME_API = 2
 MAX_ATTEMPTS = 5
 SLEEP_TIME_ERR = 60
 
@@ -112,7 +112,6 @@ for url_value in urls:
                     ]
                 }
             }
-            print(BODY_QUERY)
             response = api_request(API_URL, HEADERS, BODY_QUERY)
             if total_count is None:
                 total_count = response['count']
@@ -123,7 +122,6 @@ for url_value in urls:
             if url_value != None:
                 for text_indicator_to_statistics in response['text_indicator_to_statistics']:
                     query_value = text_indicator_to_statistics['text_indicator']['value']
-                    print(query_value)
                     for stat in text_indicator_to_statistics['statistics']:
                         date = stat['date']
                         field = stat['field']
@@ -153,7 +151,7 @@ for url_value in urls:
                         with connection.cursor() as cursor:
                             for index, row in df.iterrows():
                                 query = '''
-                                INSERT IGNORE INTO school (URL, QUERY, DATE, DEMAND, IMPRESSIONS, CLICKS, CTR, POSITION)
+                                INSERT IGNORE INTO aggr (URL, QUERY, DATE, DEMAND, IMPRESSIONS, CLICKS, CTR, POSITION)
                                 VALUES (%s, %s, STR_TO_DATE(%s, '%%d.%%m.%%Y'), %s, %s, %s, %s, %s);
                                 '''
                                 values = (row['URL'], row['QUERY'], row['DATE'], row['DEMAND'], 
