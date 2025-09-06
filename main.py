@@ -76,18 +76,18 @@ def create_raw_table_in_clickhouse_if_needed():
         url String,
         query String,
         date Date,
-        demand UInt64 COMMENT "Спрос показывает, насколько часто пользователи Яндекса задают поисковый запрос. Если сайт отображается на первой странице больше одного раза, сумма показов сайта может оказаться больше спроса",
-        impressions UInt64 COMMENT "Появление ссылки на сайт в результатах поиска Яндекса по некоторому запросу",
-        clicks UInt64 COMMENT "Переход посетителя на сайт со страницы результатов поиска Яндекса",
-        ctr Decimal64(3) COMMENT "Отношение числа кликов на сниппет к числу его показов, измеряется в процентах",
-        position Decimal64(3) COMMENT "Место, на котором появляется ссылка на сайт в поисковой выдаче Яндекса в ответ на поисковый запрос пользователя"
+        demand UInt64 COMMENT 'Спрос показывает, насколько часто пользователи Яндекса задают поисковый запрос. Если сайт отображается на первой странице больше одного раза, сумма показов сайта может оказаться больше спроса',
+        impressions UInt64 COMMENT 'Появление ссылки на сайт в результатах поиска Яндекса по некоторому запросу',
+        clicks UInt64 COMMENT 'Переход посетителя на сайт со страницы результатов поиска Яндекса',
+        ctr Decimal64(3) COMMENT 'Отношение числа кликов на сниппет к числу его показов, измеряется в процентах',
+        position Decimal64(3) COMMENT 'Место, на котором появляется ссылка на сайт в поисковой выдаче Яндекса в ответ на поисковый запрос пользователя'
     ) ENGINE = MergeTree()
     PARTITION BY toYYYYMMDD(date)
     ORDER BY (date, query, url)
     PRIMARY KEY (date, query, url)
-    COMMENT "Мониторинг поисковых запросов Yandex Webmaster doc https://yandex.ru/dev/webmaster/doc/ru/reference/host-query-analytics";
+    COMMENT 'Мониторинг поисковых запросов Yandex Webmaster doc https://yandex.ru/dev/webmaster/doc/ru/reference/host-query-analytics';
     """
-    execute_sql([create_table_query], CONNECTION_ID, CH_DB, f"{CH_TABLE}_agg")
+    execute_sql([create_table_query], CONNECTION_ID, CH_DB, CH_TABLE)
 
 
 def drop_partition_yyyymmdd_clickhouse(partition_date):
