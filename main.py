@@ -2,6 +2,7 @@
 Скрипт для сбора данных из API Яндекс.Вебмастера и записи их в базу данных.
 Переработан для работы с ClickHouse.
 MVP
+Документаця https://yandex.ru/dev/webmaster/doc/ru/reference/host-query-analytics
 """
 
 # from multiprocessing import connection
@@ -18,7 +19,7 @@ from clickhouse_driver import Client
 
 CONNECTION_ID = "clickhouse01"
 CH_PARAMS = {}  # global
-GOAL_DATE = "2025-08-29"  # расчитать для дага
+GOAL_DATE = "2025-09-01"  # расчитать для дага
 DB_SAVE_THRESHOLD = 100000
 
 
@@ -75,26 +76,18 @@ def create_raw_table_in_clickhouse_if_needed():
         url String,
         query String,
         date Date,
-        demand UInt64,
-        impressions UInt64,
-        clicks UInt64,
-        ctr Decimal64(3),
-        position Decimal64(3)
+        demand UInt64 COMMENT "Спрос показывает, насколько часто пользователи Яндекса задают поисковый запрос. Если сайт отображается на первой странице больше одного раза, сумма показов сайта может оказаться больше спроса",
+        impressions UInt64 COMMENT "Появление ссылки на сайт в результатах поиска Яндекса по некоторому запросу",
+        clicks UInt64 COMMENT "Переход посетителя на сайт со страницы результатов поиска Яндекса",
+        ctr Decimal64(3) COMMENT "Отношение числа кликов на сниппет к числу его показов, измеряется в процентах",
+        position Decimal64(3) COMMENT "Место, на котором появляется ссылка на сайт в поисковой выдаче Яндекса в ответ на поисковый запрос пользователя"
     ) ENGINE = MergeTree()
     PARTITION BY toYYYYMMDD(date)
     ORDER BY (date, query, url)
-    PRIMARY KEY (date, query, url);
+    PRIMARY KEY (date, query, url)
+    COMMENT "Мониторинг поисковых запросов Yandex Webmaster doc https://yandex.ru/dev/webmaster/doc/ru/reference/host-query-analytics";
     """
     execute_sql([create_table_query], CONNECTION_ID, CH_DB, f"{CH_TABLE}_agg")
-
-
-#     """Вставка данных в таблицу MariaDB. Данные агрегируются по URL, QUERY, DATE перед вставкой."""
-#     # Agg
-#     df = pd.DataFrame(data)
-#     df = df.groupby(["URL", "QUERY", "DATE"], as_index=False).sum()
-#     df.loc[df["IMPRESSIONS"] == 0.0, ["POSITION"]] = None
-#     df = df[df["DEMAND"] != 0.0]
-#     df["DATE"] = pd.to_datetime(df["DATE"]).dt.strftime("%d.%m.%Y")
 
 
 def drop_partition_yyyymmdd_clickhouse(partition_date):
@@ -226,11 +219,11 @@ while True:
             "limit": 500,
             "device_type_indicator": DEVICE,
             "text_indicator": "URL",
-            "region_ids": [GEO],
+            # "region_ids": [GEO],
             "filters": {
                 "text_filters": [
                     {"text_indicator": "URL", "operation": "TEXT_CONTAINS", "value": ""}
-                ]
+                ],
             },
         }
         response = api_request(API_URL, HEADERS, BODY_URL)
@@ -275,7 +268,7 @@ for url_value in urls:
                 "limit": 500,
                 "device_type_indicator": DEVICE,
                 "text_indicator": "QUERY",
-                "region_ids": [GEO],
+                # "region_ids": [GEO],
                 "filters": {
                     "text_filters": [
                         {
