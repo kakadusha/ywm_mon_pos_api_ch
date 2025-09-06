@@ -24,15 +24,6 @@ DB_SAVE_THRESHOLD = 100000
 
 def get_clickhouse_client(connection_id):
     try:
-        # connection = BaseHook.get_connection(connection_id)
-        # result = Client(
-        #     host=connection.host,
-        #     port=connection.port,
-        #     user=connection.login,
-        #     password=connection.password,
-        #     send_receive_timeout=3600,
-        # )
-
         result = Client(
             host=CH_PARAMS["host"],
             port=CH_PARAMS["port"],
@@ -79,8 +70,8 @@ def execute_sql(
 
 def create_raw_table_in_clickhouse_if_needed():
     """Создание таблицы в ClickHouse, если она не существует."""
-    create_table_query = """
-    CREATE TABLE IF NOT EXISTS sandbox.yandex_webmaster_date (
+    create_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {CH_DB}.{CH_TABLE} (
         url String,
         query String,
         date Date,
@@ -94,9 +85,7 @@ def create_raw_table_in_clickhouse_if_needed():
     ORDER BY (date, query, url)
     PRIMARY KEY (date, query, url);
     """
-    execute_sql(
-        [create_table_query], CONNECTION_ID, "sandbox", "yandex_webmaster_date_agg"
-    )
+    execute_sql([create_table_query], CONNECTION_ID, CH_DB, f"{CH_TABLE}_agg")
 
 
 #     """Вставка данных в таблицу MariaDB. Данные агрегируются по URL, QUERY, DATE перед вставкой."""
@@ -110,11 +99,9 @@ def create_raw_table_in_clickhouse_if_needed():
 
 def drop_partition_yyyymmdd_clickhouse(partition_date):
     """Удаление партиции из таблицы ClickHouse по дате в формате YYYYMMDD."""
-    drop_query = (
-        f"ALTER TABLE sandbox.yandex_webmaster_date DROP PARTITION {partition_date};"
-    )
+    drop_query = f"ALTER TABLE {CH_DB}.{CH_TABLE} DROP PARTITION {partition_date};"
     try:
-        execute_sql(drop_query, CONNECTION_ID, "sandbox", "yandex_webmaster_date")
+        execute_sql(drop_query, CONNECTION_ID, CH_DB, CH_TABLE)
         logging.info(f"Partition {partition_date} dropped successfully.")
     except Exception as err:
         logging.error(
@@ -132,7 +119,7 @@ def insert_data_to_clickhouse(data):
 
     attempts = 0
     insert_query_head = f"""
-    INSERT INTO sandbox.yandex_webmaster_date (url, query, date, demand, impressions, clicks, ctr, position)
+    INSERT INTO {CH_DB}.{CH_TABLE} (url, query, date, demand, impressions, clicks, ctr, position)
     VALUES
     """
     insert_query = (
@@ -162,8 +149,8 @@ def insert_data_to_clickhouse(data):
             execute_sql(
                 insert_query,
                 CONNECTION_ID,
-                "sandbox",
-                "yandex_webmaster_date",
+                CH_DB,
+                CH_TABLE,
                 loggin_is_on=False,
             )
             break
@@ -179,13 +166,8 @@ load_dotenv()
 
 API_URL = os.getenv("API_URL")
 HEADERS = {"Authorization": os.getenv("API_HEADERS")}
-# DB_PARAMS = {
-#     "host": os.getenv("DB_HOST"),
-#     "port": 3306,
-#     "user": os.getenv("DB_USER"),
-#     "password": os.getenv("DB_PASSWORD"),
-#     "db": os.getenv("DB_NAME"),
-# }
+CH_DB = os.getenv("CH_DB", "sandbox")
+CH_TABLE = os.getenv("CH_TABLE", "yandex_webmaster_date")
 CH_PARAMS = {
     "host": os.getenv("CH_HOST"),
     "user": os.getenv("CH_USER"),
