@@ -176,7 +176,7 @@ def insert_data_to_clickhouse(data):
 
 
 def insert_url_data_to_clickhouse(url_data):
-    """Функция заглушка, просто вывод на экран, вставка реализована в проде
+    """Вставка данных в таблицу ClickHouse. Данные НЕ агрегируются перед вставкой.
     Вставка происходит одним мультистрочным INSERT-запросом.
     Пример данных: {'URL': '/proizvodstvennyj_kalendar/2025/', 'QUERY': 'календарь 2025', 'DATE': '2025-08-12',
                     'IMPRESSIONS': 0.0, 'CLICKS': 0.0, 'CTR': 0.2, 'POSITION': 0.0}
