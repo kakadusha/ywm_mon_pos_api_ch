@@ -19,7 +19,7 @@ from clickhouse_driver import Client
 
 CONNECTION_ID = "clickhouse01"
 CH_PARAMS = {}  # global
-GOAL_DATE = "2025-09-01"  # расчитать для дага
+GOAL_DATE = "2025-09-12"  # расчитать для дага
 DB_SAVE_THRESHOLD = 100000
 
 
@@ -90,11 +90,31 @@ def create_raw_table_in_clickhouse_if_needed():
     execute_sql([create_table_query], CONNECTION_ID, CH_DB, CH_TABLE)
 
 
-def drop_partition_yyyymmdd_clickhouse(partition_date):
+def create_raw_url_table_in_clickhouse_if_needed():
+    """Создание таблицы в ClickHouse, если она не существует."""
+    create_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {CH_DB}.{CH_URL_TABLE} (
+        url String,
+        query String,
+        date Date,
+        impressions UInt64 COMMENT 'Появление ссылки на сайт в результатах поиска Яндекса по некоторому запросу',
+        clicks UInt64 COMMENT 'Переход посетителя на сайт со страницы результатов поиска Яндекса',
+        ctr Decimal64(3) COMMENT 'Отношение числа кликов на сниппет к числу его показов, измеряется в процентах',
+        position Decimal64(3) COMMENT 'Место, на котором появляется ссылка на сайт в поисковой выдаче Яндекса в ответ на поисковый запрос пользователя'
+    ) ENGINE = MergeTree()
+    PARTITION BY toYYYYMMDD(date)
+    ORDER BY (date, query, url)
+    PRIMARY KEY (date, query, url)
+    COMMENT 'Мониторинг поисковых запросов Yandex Webmaster статситика по URL https://yandex.ru/dev/webmaster/doc/ru/reference/host-query-analytics';
+    """
+    execute_sql([create_table_query], CONNECTION_ID, CH_DB, CH_TABLE)
+
+
+def drop_partition_yyyymmdd_clickhouse(ch_db, ch_table, partition_date):
     """Удаление партиции из таблицы ClickHouse по дате в формате YYYYMMDD."""
-    drop_query = f"ALTER TABLE {CH_DB}.{CH_TABLE} DROP PARTITION {partition_date};"
+    drop_query = f"ALTER TABLE {ch_db}.{ch_table} DROP PARTITION {partition_date};"
     try:
-        execute_sql(drop_query, CONNECTION_ID, CH_DB, CH_TABLE)
+        execute_sql(drop_query, CONNECTION_ID, ch_db, ch_table)
         logging.info(f"Partition {partition_date} dropped successfully.")
     except Exception as err:
         logging.error(
@@ -155,12 +175,64 @@ def insert_data_to_clickhouse(data):
             attempts += 1
 
 
+def insert_url_data_to_clickhouse(url_data):
+    """Функция заглушка, просто вывод на экран, вставка реализована в проде
+    Вставка происходит одним мультистрочным INSERT-запросом.
+    Пример данных: {'URL': '/proizvodstvennyj_kalendar/2025/', 'QUERY': 'календарь 2025', 'DATE': '2025-08-12',
+                    'IMPRESSIONS': 0.0, 'CLICKS': 0.0, 'CTR': 0.2, 'POSITION': 0.0}
+    """
+    attempts = 0
+    insert_query_head = f"""
+    INSERT INTO {CH_DB}.{CH_URL_TABLE} (url, query, date, impressions, clicks, ctr, position)
+    VALUES
+    """
+    insert_query = (
+        insert_query_head
+        + ",\n".join(
+            [
+                (
+                    "("
+                    + "'"
+                    + row["URL"].replace("\\", "\\\\").replace("'", "\\'")
+                    + "','"
+                    + row["QUERY"].replace("\\", "\\\\").replace("'", "\\'")
+                    + "','"
+                    + row["DATE"]
+                    + "',"
+                    f"{row['IMPRESSIONS']},{row['CLICKS']},{row['CTR']},{row['POSITION']}"
+                    + ")"
+                )
+                for row in url_data  # [1:100]
+            ]
+        )
+        + ";"
+    )
+
+    while attempts < MAX_ATTEMPTS_DB:
+        try:
+            execute_sql(
+                insert_query,
+                CONNECTION_ID,
+                CH_DB,
+                CH_URL_TABLE,
+                loggin_is_on=False,
+            )
+            break
+        except Exception as err:
+            logging.error(
+                f"{time.ctime()} - Ответ базы данных: {err}. Повторная попытка через {SLEEP_TIME_DB_ERR} секунд..."
+            )
+            time.sleep(SLEEP_TIME_DB_ERR)
+            attempts += 1
+
+
 load_dotenv()
 
 API_URL = os.getenv("API_URL")
 HEADERS = {"Authorization": os.getenv("API_HEADERS")}
 CH_DB = os.getenv("CH_DB", "sandbox")
 CH_TABLE = os.getenv("CH_TABLE", "yandex_webmaster_date")
+CH_URL_TABLE = os.getenv("CH_URL_TABLE", "yandex_webmaster_url_date")
 CH_PARAMS = {
     "host": os.getenv("CH_HOST"),
     "user": os.getenv("CH_USER"),
@@ -187,7 +259,9 @@ start_time = time.time()
 # connection_maria = pymysql.connect(**DB_PARAMS)
 # create_table_in_maria(connection_maria)
 create_raw_table_in_clickhouse_if_needed()
-drop_partition_yyyymmdd_clickhouse(GOAL_DATE.replace("-", ""))
+create_raw_url_table_in_clickhouse_if_needed()
+drop_partition_yyyymmdd_clickhouse(CH_DB, CH_TABLE, GOAL_DATE.replace("-", ""))
+drop_partition_yyyymmdd_clickhouse(CH_DB, CH_URL_TABLE, GOAL_DATE.replace("-", ""))
 
 
 def api_request(url, headers, body):
@@ -210,6 +284,7 @@ def api_request(url, headers, body):
 
 
 urls = []
+url_data = []
 total_count = None
 offset = 0
 while True:
@@ -232,8 +307,55 @@ while True:
             logging.info(f"{time.ctime()} - Найдено блоков total_count: {total_count}")
 
         current_batch = response["text_indicator_to_statistics"]
+        # идет тут по всем урлам и берет тока ури
+        # там еще есть статистика
+        # {
+        #     "text_indicator": {
+        #     "type": "URL",
+        #     "value": "/proizvodstvennyj_kalendar/2025/"
+        #     },
+        #     "popular_complementary_indicator": {
+        #     "type": "QUERY",
+        #     "value": "календарь 2025"
+        #     },
+        #     "statistics": [
+        #       { "date": "2025-09-02", "field": "POSITION", "value": 6.9 },
+        #       { "date": "2025-09-02", "field": "CLICKS", "value": 465.0 },
+        #       { "date": "2025-09-02", "field": "CTR", "value": 0.5 },
+        #       { "date": "2025-09-02", "field": "IMPRESSIONS", "value": 85121.0 },
+        #       { "date": "2025-09-03", "field": "POSITION", "value": 6.8 },
+        #       { "date": "2025-09-03", "field": "CLICKS", "value": 430.0 },
+        #       { "date": "2025-09-03", "field": "CTR", "value": 0.5 },
+        #       { "date": "2025-09-03", "field": "IMPRESSIONS", "value": 78183.0 },
+        # ...
+        # соберем её!
+        #
+        # DEMAND - отсутствует
+        # последняя дата такаяже -2 дня от сегодня (всего 13 дней)
+
         for item in current_batch:
-            urls.append(item["text_indicator"]["value"])
+            url_value = item["text_indicator"]["value"]
+            urls.append(url_value)
+            query_value = item["popular_complementary_indicator"]["value"]
+            # разложить их тут в таблу как и внизу сделано (пофильтровать на дату)
+            # мы сейчас эту инфу просто выкидываем
+            for stat in item["statistics"]:
+                date = stat["date"]  # здесь можно пропустить по дате
+                if date != GOAL_DATE:
+                    continue
+                field = stat["field"]
+                value = stat["value"]
+                row = {
+                    "URL": url_value,
+                    "QUERY": query_value,
+                    "DATE": date,
+                    "POSITION": 0.0,
+                    "CLICKS": 0,
+                    "CTR": 0.0,
+                    "IMPRESSIONS": 0,
+                }
+                row[field] = value
+                url_data.append(row)
 
         total_count -= len(current_batch)
         logging.info(
@@ -243,6 +365,7 @@ while True:
             logging.info(
                 f"{time.ctime()} - Составлен список urls из {len(urls)} элементов"
             )
+            insert_url_data_to_clickhouse(url_data)
             break
 
         offset += 500
